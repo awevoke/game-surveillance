@@ -15,7 +15,7 @@ Each studio operates as a self-contained capture unit. The central control room 
 │  │  (52" web)   │    │  Track B: HUD Grab   │    │  (0–30 days)  │  │
 │  │              │    │                      │    │               │  │
 │  │  Raw RTSP ───┼───▶│  FFmpeg × N tables   │    │  NFS mount    │  │
-│  │  feed        │    │  HEVC 10fps segments │    │  10GbE        │  │
+│  │  feed        │    │  HEVC/AV1 10fps segs │    │  10GbE        │  │
 │  └──────────────┘    │                      │    └───────┬───────┘  │
 │                      │  Proxy encoder        │            │          │
 │                      │  (720p/1Mbps per      │    Cloud Sync        │
@@ -51,9 +51,11 @@ Each studio operates as a self-contained capture unit. The central control room 
 
 A dedicated Linux server responsible for running all capture containers for the studio's tables. Not the Synology — compute and storage are separated.
 
+**HUD access:** The capture server accesses each table's HUD URL over the internal studio network. The HUD application uses IP allowlisting — the capture server's IP is whitelisted, and no session credentials or authentication tokens are required. This keeps the capture process stateless and removes any dependency on auth token refresh cycles during long-running sessions.
+
 **Responsibilities:**
 - Run one Docker container per table (see [Recording Pipeline](recording-pipeline.md))
-- Encode both Track A (raw feed) and Track B (HUD) per table
+- Encode both Track A (raw feed) and Track B (HUD) per table using HEVC or AV1 (hardware-dependent)
 - Encode a 720p proxy stream per table for VPN live monitoring
 - Write segments to Synology via NFSv4 mount
 - Run the local watchdog health checker

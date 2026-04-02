@@ -6,9 +6,11 @@
 |-----------|-------|-------|
 | Recording tracks | 2 per table | Track A (raw feed, 2 Mbps) + Track B (HUD, 3 Mbps) |
 | Proxy stream | 1 Mbps per table | 720p, not stored — live VPN monitoring only |
-| Total encode bitrate | 5 Mbps per table | HEVC, 10fps, CRF 28 |
-| Storage per table | ~2.2 GB/hour / ~52.7 GB/day | Both tracks combined |
-| Segment size | ~7.9 GB per segment | 1-hour file at 5 Mbps average |
+| Total encode bitrate | 5 Mbps per table (HEVC) / 3.4 Mbps (AV1) | 10fps, hardware encode |
+| Storage per table | ~52.7 GB/day (HEVC) / ~36 GB/day (AV1) | Both tracks combined |
+| Segment size | ~7.9 GB per segment (HEVC) / ~5.4 GB (AV1) | 1-hour file |
+
+> **AV1 note:** If capture servers have AV1-capable GPUs (NVIDIA RTX 4000+, Intel Arc), total storage and S3 costs reduce by approximately 32%. The projections below use HEVC as the conservative baseline. Apply a 0.68× multiplier to all storage figures if deploying with AV1.
 | Default retention | 180 days | Hot 30d + Warm 60d + Cold 90d |
 | Growth rate | +4–10 tables/year | Planning uses worst case (+10) |
 

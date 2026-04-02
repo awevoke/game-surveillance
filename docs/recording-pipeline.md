@@ -133,15 +133,57 @@ The container itself uses `restart: always` in Docker Compose as a secondary saf
 
 ---
 
-## GPU Acceleration
+## Codec Selection: HEVC vs AV1
 
-If the capture server has an NVIDIA GPU, swap `libx265` for `hevc_nvenc` to offload encoding from CPU:
+### Default: HEVC (H.265)
+
+HEVC is the baseline codec. It has broad hardware encoder support, is well-understood, and all playback software (MPV, VLC, Synology, browsers) handles it without issues.
+
+### Preferred if available: AV1
+
+AV1 delivers approximately 30–40% better compression than HEVC at equivalent quality. At our bitrate targets, this translates directly to smaller files and lower S3 costs — with no sacrifice in playback quality. The tradeoff is that hardware AV1 encoders are limited to newer GPU generations.
+
+| Codec | Bitrate (Track B HUD) | Daily/table | 30-day/table | Savings vs HEVC |
+|-------|----------------------|------------|-------------|-----------------|
+| HEVC | ~3 Mbps | ~32 GB | ~960 GB | baseline |
+| AV1 | ~2 Mbps | ~22 GB | ~648 GB | ~32% |
+
+**Use AV1 when the capture server has one of:**
+- NVIDIA RTX 4000 series or later (`av1_nvenc`) — most performant option
+- Intel Arc GPU (`av1_qsv`) — available in newer NUC/workstation platforms
+- AMD RDNA 3 or later (`av1_amf`)
+
+**Do not use software AV1 (`libaom-av1`) for real-time capture** — it is far too slow for 4K at any useful preset. SVT-AV1 (`libsvtav1`) is faster and may be viable at 10fps on a high-core-count CPU, but hardware encode is strongly preferred for 24/7 reliability.
+
+**FFmpeg AV1 variants:**
+
+```bash
+# NVIDIA RTX 4000+ (recommended)
+-c:v av1_nvenc -preset p4 -rc vbr -cq 30
+
+# Intel Arc (QSV)
+-c:v av1_qsv -global_quality 30 -look_ahead 1
+
+# AMD RDNA 3+ (AMF)
+-c:v av1_amf -quality balanced -qvbr_quality_level 30
+
+# CPU fallback — only viable at 10fps on 16+ core systems, test before deploying
+-c:v libsvtav1 -preset 8 -crf 32
+```
+
+The container entrypoint should detect available hardware at startup and select the best available encoder automatically, falling back to `libx265` if no hardware AV1 is present.
+
+**Playback compatibility:** AV1 is supported natively in MPV, VLC 3.0+, all major browsers, and Synology DSM 7+. No additional configuration is needed on the playback side.
+
+### GPU Acceleration (HEVC)
+
+If AV1 is not available but the server has a GPU, use NVENC for HEVC:
 
 ```bash
 -c:v hevc_nvenc -preset p4 -rc vbr -cq 28
 ```
 
-One RTX 3060 or better handles 10+ HEVC streams at 10fps/4K simultaneously. For Year 3 (~11 tables per studio) a single mid-range GPU covers the full studio load.
+One RTX 3060 or better handles 10+ HEVC streams at 10fps/4K simultaneously. For Year 3 (~11 tables per studio) a single mid-range GPU covers the full studio load. An RTX 4070 or better enables AV1 encode for all streams instead.
 
 ---
 

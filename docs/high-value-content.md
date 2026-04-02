@@ -14,11 +14,22 @@ High-value designation is either **pre-set** (e.g., VIP tables always run in dup
 
 ## What "High-Value" Means in Practice
 
-Examples:
-- VIP or high-wager sessions above a defined threshold
-- Sessions involving a regulatory observer or compliance audit
-- Any session manually flagged by control room staff
-- Tables designated as "certified" for regulatory purposes
+High-value designation is driven by two sources:
+
+**1. Table type (pre-configured, always-on)**
+
+Certain tables are designated high-value at the configuration level because of their regulatory standing or operational classification. This is set at provisioning time and does not change session-to-session. Examples:
+- Tables operating under a specific regulatory certification or observer requirement
+- Tables designated by an operator as requiring enhanced integrity records
+- Tables subject to audit conditions from a gaming authority
+
+**2. Manual flag (control room staff)**
+
+Any session on any table can be flagged in real-time or retroactively (within the 30-day hot window) by authorized control room staff. This covers one-off situations that do not fit a pre-configured table type. Examples:
+- A session a supervisor wants preserved for review or dispute resolution
+- A session flagged following an unusual event or player complaint
+
+**What high-value does not mean:** wager thresholds or VIP player status are not triggers. High-value designation is an operational and regulatory concept, not a financial one.
 
 ---
 
