@@ -15,22 +15,12 @@ A third **proxy stream** (720p) is generated from the HUD capture for real-time 
 
 ## Container Architecture
 
-One Docker container per table. Each container runs three processes in a supervised process group:
+One Docker container per table. Each container runs three processes in a supervised process group.
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Container: table-{studio}-{table_id}               │
-│                                                     │
-│  Xvfb :99          ← virtual 4K display             │
-│  Chromium          ← renders HUD at 3840×2160       │
-│  FFmpeg (Track A)  ← pulls RTSP, writes raw         │
-│  FFmpeg (Track B)  ← grabs Xvfb, writes HUD        │
-│  FFmpeg (Proxy)    ← scales Track B to 720p         │
-│                                                     │
-│  Volumes:                                           │
-│    /mnt/nas/{studio}/{table_id}/  ← NFSv4 mount     │
-└─────────────────────────────────────────────────────┘
-```
+> **Diagram source:** [`../diagrams/recording-pipeline.d2`](../diagrams/recording-pipeline.d2)
+> Compile with: `d2 diagrams/recording-pipeline.d2 diagrams/recording-pipeline.svg`
+
+![Recording Pipeline](../diagrams/recording-pipeline.svg)
 
 ---
 
@@ -172,6 +162,34 @@ AV1 delivers approximately 30–40% better compression than HEVC at equivalent q
 ```
 
 The container entrypoint should detect available hardware at startup and select the best available encoder automatically, falling back to `libx265` if no hardware AV1 is present.
+
+```mermaid
+flowchart TD
+    Start([Container Start]) --> Detect{Detect GPU}
+
+    Detect -->|NVIDIA RTX 4000+| NVENC_AV1[av1_nvenc\nBest option\n~32% smaller than HEVC]
+    Detect -->|Intel Arc| QSV_AV1[av1_qsv\nGood option]
+    Detect -->|AMD RDNA 3+| AMF_AV1[av1_amf\nGood option]
+    Detect -->|NVIDIA older| NVENC_HEVC[hevc_nvenc\nHEVC hardware]
+    Detect -->|No GPU| CoreCheck{16+ CPU cores?}
+
+    CoreCheck -->|Yes| SVT[libsvtav1\nTest before deploying\nmonitor CPU load]
+    CoreCheck -->|No| X265[libx265\nSafe baseline\nalways available]
+
+    NVENC_AV1 --> Encode([Begin Encoding])
+    QSV_AV1 --> Encode
+    AMF_AV1 --> Encode
+    NVENC_HEVC --> Encode
+    SVT --> Encode
+    X265 --> Encode
+
+    style NVENC_AV1 fill:#d4edda,stroke:#28a745
+    style QSV_AV1 fill:#d4edda,stroke:#28a745
+    style AMF_AV1 fill:#d4edda,stroke:#28a745
+    style NVENC_HEVC fill:#fff3cd,stroke:#ffc107
+    style SVT fill:#fff3cd,stroke:#ffc107
+    style X265 fill:#f8d7da,stroke:#dc3545
+```
 
 **Playback compatibility:** AV1 is supported natively in MPV, VLC 3.0+, all major browsers, and Synology DSM 7+. No additional configuration is needed on the playback side.
 

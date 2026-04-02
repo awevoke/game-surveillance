@@ -19,6 +19,34 @@ A 24/7 unattended capture system requires automated failure detection and recove
 
 ---
 
+## Watchdog State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Monitoring: Container starts
+
+    Monitoring --> Checking: Every 60s tick
+
+    Checking --> Healthy: File size\nincreased
+    Checking --> Stale: No growth\nfor 5 minutes
+
+    Healthy --> Monitoring: Record\nlast_growth_at
+
+    Stale --> Restarting: Restart\ncontainer
+    Restarting --> Monitoring: Success\n(reset failure count)
+    Restarting --> Stale: Still not\ngrowing
+
+    Stale --> CritAlert: 3 consecutive\nrestart failures
+    CritAlert --> ManualIntervention: Page sent\n(PagerDuty / SMS)
+    ManualIntervention --> Monitoring: Human resolves
+
+    state Checking {
+        [*] --> SizeCheck: stat() segment file
+        SizeCheck --> BrowserCheck: Track B only\nGET /health
+        BrowserCheck --> [*]
+    }
+```
+
 ## Watchdog Service
 
 A Go service runs on each capture server. It monitors all active capture containers and acts as the primary health enforcement layer.

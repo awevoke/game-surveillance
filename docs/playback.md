@@ -10,6 +10,36 @@ Three playback modes depending on where the reviewer is and what they need to ac
 | **Remote (VPN)** | Control room or offsite | Studio Synology via VPN | Depends on VPN/WAN | Cross-studio review, management oversight |
 | **Archive** | Anywhere | AWS S3 / Glacier | Minutes (S3-IA), Seconds (Glacier IR) | Disputes, compliance, historical review |
 
+```mermaid
+flowchart TD
+    Request([Playback Request]) --> Age{How old\nis the content?}
+
+    Age -->|0–30 days| Location{Viewer\nlocation?}
+    Age -->|30–90 days| S3IA[S3 Standard-IA\nDirect fetch\nMinutes]
+    Age -->|90–180 days| GlacierIR[S3 Glacier IR\nDirect fetch\nSeconds–Minutes]
+    Age -->|180+ days| Retained{Marked for\nretention?}
+
+    Location -->|At the studio| LocalNAS[Local NAS\nImmediate 4K\nNo bandwidth cost]
+    Location -->|Control room| ContentType{Viewing\npurpose?}
+    Location -->|Offsite| Tailscale[Tailscale VPN\nto nearest NAS]
+
+    ContentType -->|Live monitoring| Proxy[720p Proxy Stream\n1 Mbps per table\nRTSP from capture server]
+    ContentType -->|Review / audit| NASoverVPN[NAS over VPN\n4K on demand\n~5–8 Mbps per stream]
+
+    Retained -->|Yes| DeepArchive[Glacier Deep Archive\nInitiate restore\n12hr wait]
+    Retained -->|No| Purged[Content purged\n180-day limit reached\nNot recoverable]
+
+    DeepArchive --> Download[Download to\nlocal playback machine\nthen review]
+
+    style LocalNAS fill:#d4edda,stroke:#28a745
+    style Proxy fill:#cce5ff,stroke:#007bff
+    style NASoverVPN fill:#cce5ff,stroke:#007bff
+    style S3IA fill:#fff3cd,stroke:#ffc107
+    style GlacierIR fill:#fff3cd,stroke:#ffc107
+    style DeepArchive fill:#f8d7da,stroke:#dc3545
+    style Purged fill:#f8d7da,stroke:#dc3545
+```
+
 ---
 
 ## Time Navigation

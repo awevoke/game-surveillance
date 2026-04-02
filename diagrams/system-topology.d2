@@ -1,0 +1,116 @@
+direction: right
+
+title: Game Surveillance System Topology {
+  near: top-center
+  shape: text
+  style.font-size: 26
+  style.bold: true
+}
+
+studio: Studio (per location) {
+  style.fill: "#e8f4e8"
+  style.stroke: "#28a745"
+
+  tables: Game Tables {
+    style.fill: "#fff3cd"
+    style.stroke: "#ffc107"
+
+    hud: HUD Display\n(52" web app) {
+      shape: rectangle
+    }
+    rtsp: Camera RTSP Feed {
+      shape: cylinder
+    }
+  }
+
+  capture: Capture Server {
+    style.fill: "#cce5ff"
+    style.stroke: "#007bff"
+
+    track_a: Track A\nRaw Feed Encode {
+      shape: hexagon
+    }
+    track_b: Track B\nHUD Encode {
+      shape: hexagon
+    }
+    proxy: Proxy Encoder\n720p / 1 Mbps {
+      shape: hexagon
+    }
+    watchdog: Watchdog\nService {
+      style.fill: "#f8d7da"
+      shape: rectangle
+    }
+  }
+
+  nas: Synology NAS {
+    style.fill: "#d4edda"
+    style.stroke: "#28a745"
+
+    hot: Hot Storage\n(0–30 days) {
+      shape: cylinder
+    }
+    cache: NVMe SSD\nRead/Write Cache {
+      shape: rectangle
+      style.fill: "#c3e6cb"
+    }
+  }
+
+  tables.rtsp -> capture.track_a: RTSP pull
+  tables.hud -> capture.track_b: Xvfb\nscreen grab\n(IP allowlisted)
+  tables.hud -> capture.proxy: Xvfb\nscaled
+
+  capture.track_a -> nas.hot: NFSv4\n(1-hr segments)
+  capture.track_b -> nas.hot: NFSv4\n(1-hr segments)
+  capture.watchdog -> capture.track_a: health monitor
+  capture.watchdog -> capture.track_b: health monitor
+  nas.hot -> nas.cache: read\nacceleration
+}
+
+aws: AWS {
+  style.fill: "#fff3cd"
+  style.stroke: "#ffc107"
+
+  s3ia: S3 Standard-IA\n(Days 30–90) {
+    style.fill: "#ffeeba"
+    shape: cylinder
+  }
+  glacier: S3 Glacier IR\n(Days 90–180) {
+    style.fill: "#bee5eb"
+    shape: cylinder
+  }
+  deep: Glacier Deep Archive\n(Retention hold) {
+    style.fill: "#c3e6cb"
+    shape: cylinder
+  }
+
+  s3ia -> glacier: Lifecycle policy
+  glacier -> deep: Marked for\nretention
+}
+
+control_room: Central Control Room {
+  style.fill: "#d1ecf1"
+  style.stroke: "#17a2b8"
+
+  live: Live Grid\n720p proxy streams {
+    shape: rectangle
+  }
+  review: 4K Review\n(via NAS over VPN) {
+    shape: rectangle
+  }
+  archive: Archive Playback\n(from AWS) {
+    shape: rectangle
+  }
+  backoffice: Back Office UI {
+    style.fill: "#e2d9f3"
+    shape: rectangle
+  }
+
+  backoffice -> live
+  backoffice -> review
+  backoffice -> archive
+}
+
+studio.nas.hot -> aws.s3ia: Cloud Sync\n(Synology built-in)
+studio.capture.proxy -> control_room.live: Site-to-site VPN\n(live 720p)
+studio.nas.hot -> control_room.review: Site-to-site VPN\n(4K on demand)
+aws -> control_room.archive: Presigned URL\nor SDK fetch

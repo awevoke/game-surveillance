@@ -4,44 +4,10 @@
 
 Each studio operates as a self-contained capture unit. The central control room connects to all studios via site-to-site VPN and can monitor or review any table across any studio. Cloud storage provides long-term archival and offsite playback.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  STUDIO (per location)                                              │
-│                                                                     │
-│  ┌──────────────┐    ┌─────────────────────┐    ┌───────────────┐  │
-│  │  Game Table  │    │   Capture Server     │    │  Synology NAS │  │
-│  │              │    │                      │    │               │  │
-│  │  HUD Display │───▶│  Track A: Raw Feed   │───▶│  Hot Storage  │  │
-│  │  (52" web)   │    │  Track B: HUD Grab   │    │  (0–30 days)  │  │
-│  │              │    │                      │    │               │  │
-│  │  Raw RTSP ───┼───▶│  FFmpeg × N tables   │    │  NFS mount    │  │
-│  │  feed        │    │  HEVC/AV1 10fps segs │    │  10GbE        │  │
-│  └──────────────┘    │                      │    └───────┬───────┘  │
-│                      │  Proxy encoder        │            │          │
-│                      │  (720p/1Mbps per      │    Cloud Sync        │
-│                      │   table for VPN mon.) │            │          │
-│                      └─────────────────────┘            │          │
-│                                                          ▼          │
-│                                                   ┌──────────────┐  │
-│                                                   │  AWS S3      │  │
-│                                                   │  (Warm/Cold) │  │
-│                                                   └──────────────┘  │
-└──────────────────────────────────────┬──────────────────────────────┘
-                                       │ Site-to-site VPN
-┌──────────────────────────────────────▼──────────────────────────────┐
-│  CENTRAL CONTROL ROOM                                               │
-│                                                                     │
-│  Live monitoring:  720p proxy streams from all studios              │
-│  4K review:        Direct NAS access via VPN (onsite quality)       │
-│  Archive playback: Pull from S3 Standard-IA or Glacier              │
-│                                                                     │
-│  Control Room software (back office) handles:                       │
-│  - Multi-studio stream grid                                         │
-│  - Time-jump playback per table                                     │
-│  - Retention marking UI                                             │
-│  - High-value duplication trigger                                   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+> **Diagram source:** [`../diagrams/system-topology.d2`](../diagrams/system-topology.d2)
+> Compile with: `d2 diagrams/system-topology.d2 diagrams/system-topology.svg`
+
+![System Topology](../diagrams/system-topology.svg)
 
 ---
 
@@ -101,16 +67,41 @@ S3 Object Lock (Compliance mode) is applied at upload time. Default retention: 1
 
 ## Multi-Studio Topology
 
-```
-Studio A ──┐
-Studio B ──┼── Site-to-site VPN ──▶ Central Control Room
-Studio C ──┘
-
-Each studio: independent capture + NAS + cloud sync
-Control room: read-only VPN access to all NAS units + AWS
-```
-
 Each studio is autonomous — a VPN outage does not affect local recording. The control room loses live monitoring visibility but recordings continue uninterrupted.
+
+```mermaid
+graph LR
+    subgraph studio_a ["Studio A"]
+        A_cap[Capture Server] --> A_nas[Synology NAS]
+        A_nas --> A_s3[AWS S3]
+    end
+
+    subgraph studio_b ["Studio B"]
+        B_cap[Capture Server] --> B_nas[Synology NAS]
+        B_nas --> B_s3[AWS S3]
+    end
+
+    subgraph studio_c ["Studio C (future)"]
+        C_cap[Capture Server] --> C_nas[Synology NAS]
+        C_nas --> C_s3[AWS S3]
+    end
+
+    subgraph ccr ["Central Control Room"]
+        live[Live Grid\n720p]
+        review[4K Review]
+        archive[Archive Playback]
+    end
+
+    A_nas -- VPN --> live
+    B_nas -- VPN --> live
+    C_nas -- VPN --> live
+
+    A_nas -- VPN --> review
+    B_nas -- VPN --> review
+
+    A_s3 --> archive
+    B_s3 --> archive
+```
 
 ---
 

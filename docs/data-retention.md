@@ -4,13 +4,27 @@
 
 All recordings follow a default 180-day lifecycle. Content can be marked for extended or indefinite retention by authorized control room staff.
 
-```
-Day 0 ────────── Day 30 ──────────── Day 90 ──────────── Day 180 ──── [purge or retain]
-    │  HOT         │  WARM             │  COLD             │
-    │  Synology    │  S3 Standard-IA   │  S3 Glacier       │
-    │  NAS         │  (fast retrieval) │  Instant          │
-    │  Local disk  │  Minutes          │  Retrieval        │
-    └──────────────┴───────────────────┴───────────────────┘
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> Hot: Segment written\n(Day 0)
+
+    Hot --> Warm: Day 30\nCloud Sync uploads
+    Warm --> Cold: Day 90\nS3 lifecycle policy
+    Cold --> Purged: Day 180\n(default — no hold)
+    Cold --> DeepArchive: Day 180\n(marked for retention)
+
+    Purged --> [*]: Auto-deleted\nfrom S3
+
+    DeepArchive --> DeepArchive: Dual-auth\nrequired to release
+    DeepArchive --> [*]: Retention released\nby two authorized users
+
+    state "Hot\nSynology NAS\nImmediate access" as Hot
+    state "Warm\nS3 Standard-IA\nMinutes retrieval" as Warm
+    state "Cold\nS3 Glacier IR\nSeconds–Minutes" as Cold
+    state "Purged" as Purged
+    state "Deep Archive\nS3 Glacier DA\n12hr retrieval" as DeepArchive
 ```
 
 ### Tier Definitions
