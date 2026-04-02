@@ -14,19 +14,19 @@ rtsp_in: Camera RTSP Feed {
   style.stroke: "#ffc107"
 }
 
-hud_in: HUD Website\n(IP allowlisted) {
+hud_in: "HUD Website\n(IP allowlisted)" {
   shape: rectangle
   style.fill: "#e8f4e8"
   style.stroke: "#28a745"
 }
 
 # Container internals
-container: Docker Container: table-{studio}-{table_id} {
+container: "Docker Container: table-{studio}-{table_id}" {
   style.fill: "#f8f9fa"
   style.stroke: "#6c757d"
   style.stroke-dash: 4
 
-  xvfb: Xvfb\nVirtual 4K Display\n3840 × 2160 {
+  xvfb: "Xvfb\nVirtual 4K Display\n3840 x 2160" {
     shape: rectangle
     style.fill: "#e2d9f3"
     style.stroke: "#6f42c1"
@@ -38,77 +38,66 @@ container: Docker Container: table-{studio}-{table_id} {
     style.stroke: "#007bff"
   }
 
-  ffmpeg_a: FFmpeg — Track A\nRaw Feed\n(HEVC / AV1) {
+  ffmpeg_a: "FFmpeg - Track A\nRaw Feed\n(HEVC / AV1)" {
     shape: hexagon
     style.fill: "#d4edda"
     style.stroke: "#28a745"
   }
 
-  ffmpeg_b: FFmpeg — Track B\nHUD Capture\n(HEVC / AV1) {
+  ffmpeg_b: "FFmpeg - Track B\nHUD Capture\n(HEVC / AV1)" {
     shape: hexagon
     style.fill: "#d4edda"
     style.stroke: "#28a745"
   }
 
-  ffmpeg_proxy: FFmpeg — Proxy\n720p H.264\n1 Mbps {
+  ffmpeg_proxy: "FFmpeg - Proxy\n720p H.264\n1 Mbps" {
     shape: hexagon
     style.fill: "#fff3cd"
     style.stroke: "#ffc107"
   }
 
-  checksum: SHA-256\nSidecar Writer {
+  checksum: "SHA-256\nSidecar Writer" {
     shape: rectangle
     style.fill: "#f8d7da"
     style.stroke: "#dc3545"
   }
 
-  chrome -> xvfb: renders to\nvirtual display
-  xvfb -> ffmpeg_b: x11grab\n10 fps
-  xvfb -> ffmpeg_proxy: x11grab\n(scaled 720p)
+  chrome -> xvfb: renders to
+  xvfb -> ffmpeg_b: "x11grab\n10 fps"
+  xvfb -> ffmpeg_proxy: "x11grab\n(scaled)"
 }
 
 # External outputs
-nas: Synology NAS\n(NFSv4 mount) {
+nas: "Synology NAS\n(NFSv4 mount)" {
   style.fill: "#d4edda"
   style.stroke: "#28a745"
 
-  track_a_dir: track_a_raw/\n{date}/{hour}.mp4 {
+  track_a_dir: "track_a_raw/\n{date}/{hour}.mp4" {
     shape: cylinder
   }
-  track_b_dir: track_b_hud/\n{date}/{hour}.mp4 {
+  track_b_dir: "track_b_hud/\n{date}/{hour}.mp4" {
     shape: cylinder
   }
-  meta_dir: metadata/\n{date}/{hour}.jsonl {
-    shape: cylinder
-  }
-  sha_files: *.sha256\nsidecar files {
+  sha_files: "*.sha256\nsidecar files" {
     shape: cylinder
     style.fill: "#f8d7da"
   }
 }
 
-proxy_out: VPN Proxy Stream\nrtsp://capture:8554/{studio}/{table}/proxy {
+proxy_out: "VPN Proxy Stream\nrtsp://capture:8554/{studio}/{table}/proxy" {
   shape: oval
   style.fill: "#bee5eb"
   style.stroke: "#17a2b8"
 }
 
 # Connections
-rtsp_in -> container.ffmpeg_a: RTSP/TCP pull
-hud_in -> container.chrome: HTTP (allowlisted)
+rtsp_in -> container.ffmpeg_a: "RTSP/TCP pull"
+hud_in -> container.chrome: "HTTP (allowlisted)"
 
-container.ffmpeg_a -> nas.track_a_dir: 1-hour segments\n+ segment list
-container.ffmpeg_b -> nas.track_b_dir: 1-hour segments\n+ segment list
-container.ffmpeg_proxy -> proxy_out: live RTSP output
+container.ffmpeg_a -> nas.track_a_dir: "1-hour segments"
+container.ffmpeg_b -> nas.track_b_dir: "1-hour segments"
+container.ffmpeg_proxy -> proxy_out: "live RTSP output"
 
-nas.track_a_dir -> container.checksum: close_write\nevent
-nas.track_b_dir -> container.checksum: close_write\nevent
-container.checksum -> nas.sha_files: sha256sum\non segment close
-
-note: "Track A and Track B encode independently.\nA browser crash only affects Track B.\nTrack A (raw feed) continues uninterrupted." {
-  near: bottom-center
-  shape: text
-  style.font-size: 13
-  style.italic: true
-  style.fill: "#ffe6e6"
-}
+nas.track_a_dir -> container.checksum: "close_write event"
+nas.track_b_dir -> container.checksum: "close_write event"
+container.checksum -> nas.sha_files: "sha256sum on close"
